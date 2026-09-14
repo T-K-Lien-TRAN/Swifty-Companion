@@ -1,0 +1,354 @@
+Install Flutter and Dart:
+https://docs.flutter.dev/learn/pathway/quick-install
+
+1. Download and install prerequisite packages
+
+Using your preferred package manager or mechanism, install the latest versions of the following packages:
+
+    curl
+    git
+    unzip
+    xz-utils
+    zip
+    libglu1-mesa
+
+On Debian-based distros with apt-get, such as Ubuntu, install these packages using the following commands:
+
+sudo apt-get update -y && sudo apt-get upgrade -y
+sudo apt-get install -y curl git unzip xz-utils zip libglu1-mesa
+
+2. Download and install Visual Studio Code
+
+To quickly install Flutter, then edit and debug your apps, install and set up Visual Studio Code.
+
+You can instead install and use any other Code OSS-based editor that supports VS Code extensions. If you choose to do so, for the rest of this article, assume VS Code refers to the editor of your choice.
+
+Install and set up Flutter
+
+Now that you've installed Git and VS Code, follow these steps to use VS Code to install and set up Flutter.
+Download manually
+
+If you prefer to manually install Flutter, follow the instructions in Install Flutter manually.
+
+    Launch VS Code
+
+    If not already open, open VS Code by searching for it with Spotlight or opening it manually from the directory where it's installed.
+    Add the Flutter extension to VS Code
+
+    To add the Dart and Flutter extensions to VS Code, visit the Flutter extension's marketplace page, then click Install. If prompted by your browser, allow it to open VS Code.
+    Install Flutter with VS Code
+    
+    (Terminal: code --install-extension Dart-Code.flutter)
+
+        Open the command palette in VS Code.
+
+        Go to View > Command Palette or press Control + Shift + P.
+
+        In the command palette, type flutter.
+
+        Select Flutter: New Project.
+        (Flutter:Change SDK)
+
+        VS Code prompts you to locate the Flutter SDK on your computer. Select Download SDK.
+
+        When the Select Folder for Flutter SDK dialog displays, choose where you want to install Flutter.
+
+        Click Clone Flutter.
+
+        While downloading Flutter, VS Code displays this pop-up notification:
+
+        Downloading the Flutter SDK. This may take a few minutes.
+
+        This download takes a few minutes. If you suspect that the download has hung, click Cancel then start the installation again.
+
+        Click Add SDK to PATH.
+
+        When successful, a notification displays:
+
+        The Flutter SDK was added to your PATH
+
+        VS Code might display a Google Analytics notice.
+
+        If you agree, click OK.
+
+        To ensure that Flutter is available in all terminals:
+            Close, then reopen all terminal windows.
+            Restart VS Code.
+    Note
+
+    The VS Code setup process might check for Android Studio, which can result in a warning if it's not installed. You can safely ignore this if you're targeting other platforms (like web, iOS, or macOS), as the installation will still succeed. Afterward, run flutter doctor to verify your installation.
+    Troubleshoot installation issues
+
+    If you encounter any issues during installation, check out Flutter installation troubleshooting.
+    
+
+Flutter itself is now installed correctly. The remaining warnings concern Android and optional Linux desktop development.
+
+For Android development, first accept the licences:
+
+flutter doctor --android-licenses
+
+Press y for every licence.
+
+You also have two versions of adb. Check which one is currently used:
+
+which -a adb
+
+Flutter should preferably use:
+
+/home/lien/Android/Sdk/platform-tools/adb
+
+Add it before the system version in your PATH:
+
+echo 'export PATH="$HOME/Android/Sdk/platform-tools:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+
+Then check:
+
+which adb
+adb version
+
+If you want to develop Linux desktop applications too, install the missing packages:
+
+sudo apt update
+sudo apt install libgtk-3-dev mesa-utils
+
+Finally, restart VS Code and run:
+
+flutter doctor
+
+The important part is already working:
+
+[✓] Flutter
+[✓] Chrome
+[✓] Connected device
+
+
+Build your first app
+
+Task 1: Confirm your Dart setup
+#
+
+First, make sure Dart is ready to go on your system by following these steps.
+
+    Open a terminal (or command prompt).
+
+    Run the following command to check your Dart SDK version:
+
+    dart --version
+
+    Make sure that you see output similar to this (the version numbers might be different):
+
+    Dart SDK version: 3.9.2 (stable) (Wed Aug 27 03:49:40 2025 -0700) on "linux_x64"
+
+    If you see an error like "command not found," refer to the Dart installation guide to set up your environment.
+
+Task 2: Create a new Dart project
+#
+
+Now, create your first Dart command-line application.
+
+    In the same terminal, create a new directory called dartpedia to hold your project. Then switch into that directory.
+
+    mkdir dartpedia
+    cd dartpedia
+
+    Run the following command:
+
+    dart create cli
+
+    The dart create command generates a basic Dart project named "cli" (for Command Line Interface). It sets up the essential files and directories you need.
+
+    You should see output similar to this, confirming the project creation:
+
+    Creating cli using template console...
+
+      .gitignore
+      analysis_options.yaml
+      CHANGELOG.md
+      pubspec.yaml
+      README.md
+      bin/cli.dart
+      lib/cli.dart
+      test/cli_test.dart
+
+    Running pub get...                     1.2s
+      Resolving dependencies...
+      Downloading packages...
+      Changed 49 dependencies!
+
+    Created project cli in cli! In order to get started, run the following commands:
+
+      cd cli
+      dart run
+
+    Note
+
+    The dart create command created a number of files. Don't worry about these now. Their specifics will be covered in future chapters.
+
+Task 3: Run your first Dart program
+#
+
+Next, run your program to test it out.
+
+    In the terminal, navigate into your new project directory:
+
+    cd cli
+
+    Run the default application:
+
+    dart run
+
+    This command tells Dart to execute your program.
+
+    You should see the following output:
+
+    Building package executable...
+    Built cli:cli.
+    Hello world: 42!
+
+    Congratulations! You've successfully run your first Dart program!
+
+Task 4: Make your first code change
+#
+
+Next, modify the code that generated Hello world: 42!.
+
+    In a code editor, open the bin/cli.dart file.
+
+    The bin/ directory is where your executable code lives. cli.dart is the entry point of your application.
+
+    Inside, you'll see the main function. Every Dart program starts executing from its main function.
+
+    Check to make sure that your bin/cli.dart looks like this:
+    bin/cli.dart
+
+    import 'package:cli/cli.dart' as cli;
+
+    void main(List<String> arguments) {
+      print('Hello world: ${cli.calculate()}!');
+    }
+
+    Simplify the output for now. Delete the first line (you don't need this import statement), and change the print statement to display a simple greeting:
+    bin/cli.dart
+
+    import 'package:cli/cli.dart' as cli; // Delete this entire line
+
+    void main(List<String> arguments) {
+      print('Hello, Dart!'); // Change this line
+    }
+
+    Save your file. Then in the terminal, run your program again:
+
+    dart run
+
+    Check to make sure that you see the following:
+
+    Building package executable...
+    Built cli:cli.
+    Hello, Dart!
+
+    You've successfully modified and re-run your first Dart program!
+
+
+
+
+
+
+
+
+Swifty Companion – Recommended Programming Language and Framework
+
+Best choice for this project
+
+Programming language: Dart
+Mobile framework: Flutter
+IDE: Android Studio, or VS Code with the Flutter extension
+Target platform: Android first, then test iOS only if you have access to a Mac
+
+Despite the name “Swifty Companion,” Swift is not mandatory. The subject allows any mobile language and compatible framework, and it specifically mentions Dart, Flutter and Android Studio as possible choices.
+
+Why Flutter is the most suitable
+
+The application only needs a relatively small set of mobile features:
+
+1. A search screen for entering a 42 login.
+2. A profile screen displaying the student’s information.
+3. Requests to the 42 REST API.
+4. OAuth2 authentication and token management.
+5. Loading, network and “user not found” error handling.
+6. A responsive interface for different screen sizes.
+
+Flutter handles all of these without requiring separate Android and iOS codebases. It supports both platforms and provides standard solutions for navigation, responsive interfaces, REST requests and authenticated requests.
+
+Recommended technical stack
+
+Language: Dart
+Framework: Flutter
+IDE: Android Studio
+Architecture: Simple MVVM or service/repository structure
+HTTP requests: http package
+Configuration: flutter_dotenv
+Navigation: Flutter Navigator
+JSON parsing: Dart model classes
+Authentication: OAuth2 token service
+
+For a project this small, avoid unnecessarily complicated technologies such as Redux, BLoC or a large Clean Architecture implementation. Flutter’s normal StatefulWidget, ChangeNotifier, or a small view-model structure is enough.
+
+Suggested folder structure
+
+lib/
+├── main.dart
+├── models/
+│   ├── user.dart
+│   ├── skill.dart
+│   └── project.dart
+├── services/
+│   ├── api_service.dart
+│   └── auth_service.dart
+├── screens/
+│   ├── search_screen.dart
+│   └── profile_screen.dart
+├── widgets/
+│   ├── skill_item.dart
+│   └── project_item.dart
+└── utils/
+    └── exceptions.dart
+
+Important OAuth2 point
+
+Do not request a new token every time you search for a student. The subject explicitly prohibits creating a token for every request. Store the token and its expiration time, reuse it, and optionally implement automatic refreshing for the bonus.
+
+Basic flow
+
+Application starts
+        ↓
+Check whether a valid token exists
+        ↓
+Create or refresh the token when necessary
+        ↓
+User enters a login
+        ↓
+Request the student from the 42 API
+        ↓
+Display profile, skills and projects
+
+Keep credentials out of Git, as required by the subject.
+
+.gitignore:
+
+.env
+
+.env file:
+
+CLIENT_ID=your_client_id
+CLIENT_SECRET=your_client_secret
+
+When another choice would make sense
+
+Choose Swift + SwiftUI only when your primary objective is learning native iOS development and you have a Mac with Xcode.
+
+Choose Kotlin + Jetpack Compose when you specifically want native Android development.
+
+For completing this subject efficiently while acquiring a marketable cross-platform mobile skill, Dart + Flutter is the strongest choice.
+
