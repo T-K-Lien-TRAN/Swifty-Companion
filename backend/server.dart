@@ -4,8 +4,15 @@ import 'dart:convert';
 import 'dart:io';
 
 final client = HttpClient();
+Uri apiBaseUri = Uri.https('api.intra.42.fr', '/');
 String? cachedToken;
 DateTime tokenExpiresAt = DateTime.fromMillisecondsSinceEpoch(0);
+Future<String>? pendingTokenRequest;
+
+class ApiHttpException implements Exception {
+  const ApiHttpException(this.statusCode);
+  final int statusCode;
+}
 
 // A shell cannot export names beginning with a digit. Read the supplied .env
 // directly, while allowing real process environment variables to override it.
@@ -45,31 +52,72 @@ Future<Map<String, dynamic>> requestJson(Uri uri, {
   final response = await req.close();
   final content = await utf8.decoder.bind(response).join();
   if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw HttpException('42 returned ${response.statusCode}', uri: uri);
+    throw ApiHttpException(response.statusCode);
   }
   final json = jsonDecode(content);
   if (json is! Map<String, dynamic>) throw const FormatException('Invalid 42 response');
   return json;
 }
 
-Future<String> accessToken() async {
-  if (cachedToken != null && DateTime.now().isBefore(tokenExpiresAt)) return cachedToken!;
+Future<String> requestNewToken() async {
   final id = credentials['42_CLIENT_ID'];
   final secret = credentials['42_CLIENT_SECRET'];
   if (id == null || secret == null) throw StateError('Missing 42 credentials');
-  final result = await requestJson(
-    Uri.https('api.intra.42.fr', '/oauth/token'),
-    method: 'POST',
-    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    body: {'grant_type': 'client_credentials', 'client_id': id, 'client_secret': secret}
-        .entries.map((e) => '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}').join('&'),
-  );
+  late final Map<String, dynamic> result;
+  try {
+    result = await requestJson(
+      apiBaseUri.resolve('/oauth/token'),
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {'grant_type': 'client_credentials', 'client_id': id, 'client_secret': secret}
+          .entries.map((e) => '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}').join('&'),
+    );
+  } on ApiHttpException {
+    throw const FormatException('Token request failed');
+  }
   final token = result['access_token'];
-  if (token is! String) throw const FormatException('No access token');
-  cachedToken = token;
+  if (token is! String || token.isEmpty) throw const FormatException('No access token');
   final seconds = (result['expires_in'] as num?)?.toInt() ?? 3600;
-  tokenExpiresAt = DateTime.now().add(Duration(seconds: seconds > 60 ? seconds - 60 : 0));
+  if (seconds <= 0) throw const FormatException('Invalid token lifetime');
+  // Renew before expiry; keep a smaller margin for short-lived tokens.
+  final margin = seconds ~/ 10 < 60 ? seconds ~/ 10 : 60;
+  tokenExpiresAt = DateTime.now().add(Duration(seconds: seconds - margin));
+  cachedToken = token;
   return token;
+}
+
+Future<String> accessToken({String? rejectedToken}) async {
+  // A different request may already have replaced the token rejected by 42.
+  if (rejectedToken != null && cachedToken == rejectedToken) {
+    cachedToken = null;
+    tokenExpiresAt = DateTime.fromMillisecondsSinceEpoch(0);
+  }
+  if (cachedToken != null && DateTime.now().isBefore(tokenExpiresAt)) {
+    return cachedToken!;
+  }
+  if (pendingTokenRequest != null) return pendingTokenRequest!;
+
+  // Share one refresh among searches that arrive at the same time.
+  final refresh = requestNewToken();
+  pendingTokenRequest = refresh;
+  try {
+    return await refresh;
+  } finally {
+    if (identical(pendingTokenRequest, refresh)) pendingTokenRequest = null;
+  }
+}
+
+Future<Map<String, dynamic>> fetchStudent(String login) async {
+  final uri = apiBaseUri.resolve('/v2/users/$login');
+  final token = await accessToken();
+  try {
+    return await requestJson(uri, headers: {'Authorization': 'Bearer $token'});
+  } on ApiHttpException catch (error) {
+    if (error.statusCode != HttpStatus.unauthorized) rethrow;
+    // The token can be revoked before its advertised expiry. Retry once only.
+    final replacement = await accessToken(rejectedToken: token);
+    return requestJson(uri, headers: {'Authorization': 'Bearer $replacement'});
+  }
 }
 
 void jsonResponse(HttpResponse response, int status, Object data) {
@@ -111,15 +159,11 @@ Future<void> main() async {
       continue;
     }
     try {
-      final token = await accessToken();
-      final user = await requestJson(
-        Uri.https('api.intra.42.fr', '/v2/users/${path[1]}'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
+      final user = await fetchStudent(path[1]);
       jsonResponse(request.response, 200, user);
-    } on HttpException catch (e) {
+    } on ApiHttpException catch (e) {
       // Avoid sending credentials or token details back to the device.
-      final status = e.message.contains('404') ? 404 : 502;
+      final status = e.statusCode == HttpStatus.notFound ? 404 : 502;
       jsonResponse(request.response, status,
           {'error': status == 404 ? 'Student not found.' : '42 API is unavailable.'});
     } catch (e) {
