@@ -352,3 +352,451 @@ Choose Kotlin + Jetpack Compose when you specifically want native Android develo
 
 For completing this subject efficiently while acquiring a marketable cross-platform mobile skill, Dart + Flutter is the strongest choice.
 
+
+Yes. You can test the bonus **without waiting for the real 42 token to expire**.
+
+Your code has three bonus behaviors worth testing:
+
+1. expired token → automatically obtain a new token;
+2. rejected token (`401`) → obtain another token and retry once;
+3. simultaneous searches → only one token refresh is performed.
+
+Your implementation for these is in `requestNewToken()`, `accessToken()`, and `fetchStudent()`.  
+
+## Test 1 — automatic expiration refresh
+
+This is the most important test for the bonus.
+
+Currently you use the real `expires_in` returned by 42:
+
+```dart
+final seconds = (result['expires_in'] as num?)?.toInt() ?? 3600;
+```
+
+
+
+For testing only, temporarily replace it with:
+
+```dart
+final seconds = 10;
+```
+
+Also add this temporary log inside `requestNewToken()`:
+
+```dart
+print('NEW 42 TOKEN CREATED at ${DateTime.now()}');
+```
+
+For example:
+
+```dart
+final token = result['access_token'];
+
+if (token is! String || token.isEmpty) {
+  throw const FormatException('No access token');
+}
+
+print('NEW 42 TOKEN CREATED at ${DateTime.now()}');
+
+final seconds = 10;
+
+final margin = seconds ~/ 10 < 60 ? seconds ~/ 10 : 60;
+
+tokenExpiresAt = DateTime.now().add(
+  Duration(seconds: seconds - margin),
+);
+
+cachedToken = token;
+
+return token;
+```
+
+Now start your backend:
+
+```bash
+dart run backend/server.dart
+```
+
+or whatever command you normally use for your `server.dart`.
+
+You should see:
+
+```text
+Listening on port 8080
+```
+
+### First request
+
+Run:
+
+```bash
+curl http://127.0.0.1:8080/students/thitran
+```
+
+You should see:
+
+```text
+NEW 42 TOKEN CREATED at ...
+```
+
+and receive the student's JSON.
+
+Flow:
+
+```text
+Request student
+      ↓
+No cached token
+      ↓
+Create Token A
+      ↓
+42 API
+      ↓
+✅ Student returned
+```
+
+### Wait more than 10 seconds
+
+Then run again:
+
+```bash
+curl http://127.0.0.1:8080/students/thitran
+```
+
+You should see another:
+
+```text
+NEW 42 TOKEN CREATED at ...
+```
+
+That proves:
+
+```text
+Token A expired
+      ↓
+accessToken() detects expiration
+      ↓
+requestNewToken()
+      ↓
+Token B created automatically
+      ↓
+Student request succeeds
+```
+
+The important thing is that you **do not restart the backend**.
+
+That is your bonus demonstration.
+
+---
+
+## Test 2 — prove the application continues working
+
+A nice evaluator demonstration would be:
+
+```bash
+dart run backend/server.dart
+```
+
+Then:
+
+```bash
+curl http://127.0.0.1:8080/students/thitran
+```
+
+Result:
+
+```text
+NEW 42 TOKEN CREATED
+{student JSON ...}
+```
+
+Wait 10 seconds.
+
+Then search a different student:
+
+```bash
+curl http://127.0.0.1:8080/students/<another-login>
+```
+
+You should get:
+
+```text
+NEW 42 TOKEN CREATED
+{student JSON ...}
+```
+
+without doing:
+
+```text
+Ctrl+C
+```
+
+and without restarting:
+
+```bash
+dart run backend/server.dart
+```
+
+So you can explain to the evaluator:
+
+```text
+I intentionally reduced the token lifetime to 10 seconds for testing.
+
+The first search creates Token A.
+
+After 10 seconds, Token A is considered expired.
+
+I perform another search without restarting the backend.
+
+The backend automatically requests Token B and completes the search.
+```
+
+That directly demonstrates:
+
+> "If the token expires, the application must refresh it."
+
+---
+
+## Test 3 — test the `401 Unauthorized` protection
+
+Your code has an even stronger protection:
+
+```dart
+try {
+  return await requestJson(
+    uri,
+    headers: {'Authorization': 'Bearer $token'},
+  );
+} on ApiHttpException catch (error) {
+  if (error.statusCode != HttpStatus.unauthorized) rethrow;
+
+  final replacement =
+      await accessToken(rejectedToken: token);
+
+  return requestJson(
+    uri,
+    headers: {
+      'Authorization': 'Bearer $replacement',
+    },
+  );
+}
+```
+
+
+
+Meaning:
+
+```text
+Token appears valid
+      ↓
+42 says 401
+      ↓
+Invalidate old token
+      ↓
+Generate new token
+      ↓
+Retry ONCE
+      ↓
+✅ Continue
+```
+
+Testing this manually against the real API is harder because you need 42 to reject the token.
+
+For evaluation, you can temporarily simulate it.
+
+For example, inside `fetchStudent()` change:
+
+```dart
+final token = await accessToken();
+```
+
+temporarily to:
+
+```dart
+final token = 'invalid-token-for-testing';
+```
+
+Then the first call to 42 should return:
+
+```text
+401 Unauthorized
+```
+
+However, there's an important detail: with that exact modification, `accessToken(rejectedToken: token)` won't necessarily invalidate the cached valid token because the fake string isn't equal to `cachedToken`.
+
+A cleaner temporary test is to force your cached token to something invalid after obtaining it.
+
+For example:
+
+```dart
+var token = await accessToken();
+
+token = 'invalid-token-for-testing';
+```
+
+But again, this doesn't perfectly exercise the same cached-token rejection path.
+
+So for your school demonstration, **Test 1 is the cleanest and safest bonus demonstration**.
+
+---
+
+## Test 4 — show that the server was never restarted
+
+You can make the test even clearer by adding this in `main()`:
+
+```dart
+print('SERVER STARTED at ${DateTime.now()}');
+```
+
+Then your terminal might show:
+
+```text
+SERVER STARTED at 15:20:00
+Listening on port 8080
+
+NEW 42 TOKEN CREATED at 15:20:05
+GET student works
+
+NEW 42 TOKEN CREATED at 15:20:15
+GET student works
+
+NEW 42 TOKEN CREATED at 15:20:25
+GET student works
+```
+
+Notice:
+
+```text
+SERVER STARTED
+```
+
+appears only **once**, while:
+
+```text
+NEW 42 TOKEN CREATED
+```
+
+appears several times.
+
+That's excellent evidence that:
+
+```text
+❌ Server was NOT restarted
+
+but
+
+✅ Tokens were recreated automatically
+```
+
+---
+
+## Test it from Flutter too
+
+Once the backend test works, do the exact same thing from your Swifty Companion UI.
+
+Start backend:
+
+```bash
+dart run backend/server.dart
+```
+
+Start Flutter:
+
+```bash
+flutter run -d chrome \
+  --dart-define=API_BASE_URL=http://127.0.0.1:8080
+```
+
+Search:
+
+```text
+thitran
+```
+
+You should see:
+
+```text
+Flutter
+   ↓
+backend
+   ↓
+Token A
+   ↓
+42
+   ↓
+✅ profile
+```
+
+Wait over 10 seconds.
+
+Search another student.
+
+You should see:
+
+```text
+Flutter
+   ↓
+backend
+   ↓
+Token A expired
+   ↓
+Token B automatically created
+   ↓
+42
+   ↓
+✅ profile
+```
+
+The Flutter application should not display an authentication error.
+
+---
+
+## One very important thing after testing
+
+After your demonstration, restore:
+
+```dart
+final seconds =
+    (result['expires_in'] as num?)?.toInt() ?? 3600;
+```
+
+Do **not** leave:
+
+```dart
+final seconds = 10;
+```
+
+in the final submitted project.
+
+Your real code should continue using the actual lifetime sent by 42. 
+
+### Best evaluation demonstration
+
+I would demonstrate exactly this:
+
+```text
+1. Start backend once.
+
+2. Token A automatically created.
+
+3. Search student → works.
+
+4. Wait 10 seconds.
+
+5. Do NOT restart backend.
+
+6. Search another student.
+
+7. Backend prints:
+   "NEW 42 TOKEN CREATED"
+
+8. Second student appears normally.
+
+✅ Bonus demonstrated:
+   expired token → automatically recreated
+   application continues working
+```
+
+That is probably the clearest test of this specific bonus requirement.
+
+
