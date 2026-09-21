@@ -78,6 +78,8 @@ Future<String> requestNewToken() async {
   final token = result['access_token'];
   if (token is! String || token.isEmpty) throw const FormatException('No access token');
   final seconds = (result['expires_in'] as num?)?.toInt() ?? 3600;
+  //print('NEW 42 TOKEN CREATED at ${DateTime.now()}');
+  //final seconds = 10;
   if (seconds <= 0) throw const FormatException('Invalid token lifetime');
   // Renew before expiry; keep a smaller margin for short-lived tokens.
   final margin = seconds ~/ 10 < 60 ? seconds ~/ 10 : 60;

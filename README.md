@@ -1,6 +1,6 @@
 # swifty_companion
 
-A new Flutter project.
+A new Flutter project. Read Tutorial here: https://docs.flutter.dev/learn
 
 ## Run
 
@@ -20,3 +20,6 @@ an API error without exposing credentials to the app.
 
 ## Home IP address:
 Run `flutter run -d R3CX10PCLMY --dart-define=API_BASE_URL=http://192.168.122.1:8080`
+
+## Run with Firefox and others
+Run `flutter run -d web-server --dart-define=API_BASE_URL=http://127.0.0.1:8080`
