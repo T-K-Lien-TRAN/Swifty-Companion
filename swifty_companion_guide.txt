@@ -800,3 +800,107 @@ I would demonstrate exactly this:
 That is probably the clearest test of this specific bonus requirement.
 
 
+To get the names of fields of users, go to this:
+Users->GET /v2/users/:id
+https://api.intra.42.fr/apidoc/2.0/users/show.html
+
+
+To get the names of fields of projects of users, go to this:
+Projects Users->GET /v2/users/:user_id/projects_users
+https://api.intra.42.fr/apidoc/2.0/projects_users/index.html
+
+
+To get the names of fields of skills of users, go to this:
+GET /v2/users/:id
+GET /v2/skills
+https://api.intra.42.fr/apidoc/2.0/skills/index.html
+
+
+You can inspect these exact names from your running backend:
+
+curl -s http://127.0.0.1:8080/students/thitran | jq
+
+Show only top-level user keys:
+
+curl -s http://127.0.0.1:8080/students/thitran |
+jq 'keys'
+  "achievements",
+  "active?",
+  "alumni?",
+  "alumnized_at",
+  "anonymize_date",
+  "campus",
+  "campus_users",
+  "correction_point",
+  "created_at",
+  "cursus_users",
+  "data_erasure_date",
+  "displayname",
+  "email",
+  "expertises_users",
+  "first_name",
+  "groups",
+  "id",
+  "image",
+  "kind",
+  "languages_users",
+  "last_name",
+  "location",
+  "login",
+  "partnerships",
+  "patroned",
+  "patroning",
+  "phone",
+  "pool_month",
+  "pool_year",
+  "projects_users",
+  "roles",
+  "staff?",
+  "titles",
+  "titles_users",
+  "updated_at",
+  "url",
+  "usual_first_name",
+  "usual_full_name",
+  "wallet"
+]
+
+Obtain only key names of projects:
+curl -s http://127.0.0.1:8080/students/thitran \
+  | jq '.projects_users[0] | keys'
+[
+  "created_at",
+  "current_team_id",
+  "cursus_ids",
+  "final_mark",
+  "id",
+  "marked",
+  "marked_at",
+  "occurrence",
+  "project",
+  "retriable_at",
+  "status",
+  "updated_at",
+  "validated?"
+]
+
+To inspect your actual projects through your backend:
+
+curl -s http://127.0.0.1:8080/students/thitran \
+  | jq '.projects_users[]'
+  
+Obtain only key names of skills:
+
+curl -s http://127.0.0.1:8080/students/thitran \
+  | jq '.cursus_users[0].skills[0] | keys'
+[
+  "id",
+  "level",
+  "name"
+]
+
+To inspect your actual skills through your backend:
+
+curl -s http://127.0.0.1:8080/students/thitran \
+  | jq '.cursus_users[].skills'
+

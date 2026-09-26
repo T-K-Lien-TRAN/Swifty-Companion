@@ -73,12 +73,15 @@ class ProfileScreen extends StatelessWidget {
                   if (level != null) ...[
                     Row(
                       children: [
-                        const Text('LEVEL'),
+                        Text('LEVEL ${level.floor()}'),
                         const Spacer(),
-                        Text(
-                          level.toStringAsFixed(2),
+                        Text( 
+                          '${((level - level.floor()) * 100).round()}%',
                           style: const TextStyle(color: green),
                         ),
+                          //level.toStringAsFixed(2),
+                          //style: const TextStyle(color: green),
+                        //),
                       ],
                     ),
                     const SizedBox(height: 8),
