@@ -67,6 +67,7 @@ Future<String> getToken(
   }
 
   if (token != null && DateTime.now().isBefore(tokenExpiresAt)) {
+    print('Using cached 42 token');
     return token!;
   }
 
